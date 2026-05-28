@@ -29,3 +29,7 @@
 test/**
 docs/**
 .travis.yml
+
+# README.md carries a hand-curated intro and quick-start; the generator's
+# default boilerplate would clobber it. Maintain it manually.
+README.md

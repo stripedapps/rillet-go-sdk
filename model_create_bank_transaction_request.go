@@ -35,6 +35,7 @@ type CreateBankTransactionRequest struct {
 	Pending *bool `json:"pending,omitempty"`
 	// Whether the transaction is excluded from reconciliation
 	Excluded *bool `json:"excluded,omitempty"`
+	ExternalReferences []ExternalReference `json:"external_references,omitempty"`
 }
 
 type _CreateBankTransactionRequest CreateBankTransactionRequest
@@ -285,6 +286,38 @@ func (o *CreateBankTransactionRequest) SetExcluded(v bool) {
 	o.Excluded = &v
 }
 
+// GetExternalReferences returns the ExternalReferences field value if set, zero value otherwise.
+func (o *CreateBankTransactionRequest) GetExternalReferences() []ExternalReference {
+	if o == nil || IsNil(o.ExternalReferences) {
+		var ret []ExternalReference
+		return ret
+	}
+	return o.ExternalReferences
+}
+
+// GetExternalReferencesOk returns a tuple with the ExternalReferences field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *CreateBankTransactionRequest) GetExternalReferencesOk() ([]ExternalReference, bool) {
+	if o == nil || IsNil(o.ExternalReferences) {
+		return nil, false
+	}
+	return o.ExternalReferences, true
+}
+
+// HasExternalReferences returns a boolean if a field has been set.
+func (o *CreateBankTransactionRequest) HasExternalReferences() bool {
+	if o != nil && !IsNil(o.ExternalReferences) {
+		return true
+	}
+
+	return false
+}
+
+// SetExternalReferences gets a reference to the given []ExternalReference and assigns it to the ExternalReferences field.
+func (o *CreateBankTransactionRequest) SetExternalReferences(v []ExternalReference) {
+	o.ExternalReferences = v
+}
+
 func (o CreateBankTransactionRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -308,6 +341,9 @@ func (o CreateBankTransactionRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Excluded) {
 		toSerialize["excluded"] = o.Excluded
+	}
+	if !IsNil(o.ExternalReferences) {
+		toSerialize["external_references"] = o.ExternalReferences
 	}
 	return toSerialize, nil
 }

@@ -18,8 +18,16 @@ import (
 
 // CreateInvoiceRequest - struct for CreateInvoiceRequest
 type CreateInvoiceRequest struct {
+	CreateArOnlyInvoiceRequest *CreateArOnlyInvoiceRequest
 	CreateFullInvoiceRequest *CreateFullInvoiceRequest
 	CreateRevenueRecognitionOnlyInvoiceRequest *CreateRevenueRecognitionOnlyInvoiceRequest
+}
+
+// CreateArOnlyInvoiceRequestAsCreateInvoiceRequest is a convenience function that returns CreateArOnlyInvoiceRequest wrapped in CreateInvoiceRequest
+func CreateArOnlyInvoiceRequestAsCreateInvoiceRequest(v *CreateArOnlyInvoiceRequest) CreateInvoiceRequest {
+	return CreateInvoiceRequest{
+		CreateArOnlyInvoiceRequest: v,
+	}
 }
 
 // CreateFullInvoiceRequestAsCreateInvoiceRequest is a convenience function that returns CreateFullInvoiceRequest wrapped in CreateInvoiceRequest
@@ -41,6 +49,23 @@ func CreateRevenueRecognitionOnlyInvoiceRequestAsCreateInvoiceRequest(v *CreateR
 func (dst *CreateInvoiceRequest) UnmarshalJSON(data []byte) error {
 	var err error
 	match := 0
+	// try to unmarshal data into CreateArOnlyInvoiceRequest
+	err = newStrictDecoder(data).Decode(&dst.CreateArOnlyInvoiceRequest)
+	if err == nil {
+		jsonCreateArOnlyInvoiceRequest, _ := json.Marshal(dst.CreateArOnlyInvoiceRequest)
+		if string(jsonCreateArOnlyInvoiceRequest) == "{}" { // empty struct
+			dst.CreateArOnlyInvoiceRequest = nil
+		} else {
+			if err = validator.Validate(dst.CreateArOnlyInvoiceRequest); err != nil {
+				dst.CreateArOnlyInvoiceRequest = nil
+			} else {
+				match++
+			}
+		}
+	} else {
+		dst.CreateArOnlyInvoiceRequest = nil
+	}
+
 	// try to unmarshal data into CreateFullInvoiceRequest
 	err = newStrictDecoder(data).Decode(&dst.CreateFullInvoiceRequest)
 	if err == nil {
@@ -77,6 +102,7 @@ func (dst *CreateInvoiceRequest) UnmarshalJSON(data []byte) error {
 
 	if match > 1 { // more than 1 match
 		// reset to nil
+		dst.CreateArOnlyInvoiceRequest = nil
 		dst.CreateFullInvoiceRequest = nil
 		dst.CreateRevenueRecognitionOnlyInvoiceRequest = nil
 
@@ -90,6 +116,10 @@ func (dst *CreateInvoiceRequest) UnmarshalJSON(data []byte) error {
 
 // Marshal data from the first non-nil pointers in the struct to JSON
 func (src CreateInvoiceRequest) MarshalJSON() ([]byte, error) {
+	if src.CreateArOnlyInvoiceRequest != nil {
+		return json.Marshal(&src.CreateArOnlyInvoiceRequest)
+	}
+
 	if src.CreateFullInvoiceRequest != nil {
 		return json.Marshal(&src.CreateFullInvoiceRequest)
 	}
@@ -106,6 +136,10 @@ func (obj *CreateInvoiceRequest) GetActualInstance() (interface{}) {
 	if obj == nil {
 		return nil
 	}
+	if obj.CreateArOnlyInvoiceRequest != nil {
+		return obj.CreateArOnlyInvoiceRequest
+	}
+
 	if obj.CreateFullInvoiceRequest != nil {
 		return obj.CreateFullInvoiceRequest
 	}
@@ -120,6 +154,10 @@ func (obj *CreateInvoiceRequest) GetActualInstance() (interface{}) {
 
 // Get the actual instance value
 func (obj CreateInvoiceRequest) GetActualInstanceValue() (interface{}) {
+	if obj.CreateArOnlyInvoiceRequest != nil {
+		return *obj.CreateArOnlyInvoiceRequest
+	}
+
 	if obj.CreateFullInvoiceRequest != nil {
 		return *obj.CreateFullInvoiceRequest
 	}

@@ -28,9 +28,11 @@ type BillPaymentsAPI interface {
 	Books a cash or scheduled disbursement that settles all or part of a bill, updating the outstanding payable and linking treasury activity.
 Provide funding source details consistent with your configured payment rails so downstream bank reconciliation stays accurate.
 
+IMPORTANT: Notice this operation has a redundancy between the `bill_id` path parameter and the `billId` attribute in the request body, which takes precedence and is used in internal logic. When executing this operation, both IDs must match, otherwise the request will be rejected. This is a legacy redundancy and will be removed in future versions of this operation.
+
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
-	@param billId UUID of the bill to be used in this operation.
+	@param billId UUID of the bill to be used in this operation. Must match the `billId` provided in the request body.
 	@return ApiCreateABillPaymentRequest
 	*/
 	CreateABillPayment(ctx context.Context, billId string) ApiCreateABillPaymentRequest
@@ -99,9 +101,11 @@ CreateABillPayment Creates a bill payment
 Books a cash or scheduled disbursement that settles all or part of a bill, updating the outstanding payable and linking treasury activity.
 Provide funding source details consistent with your configured payment rails so downstream bank reconciliation stays accurate.
 
+IMPORTANT: Notice this operation has a redundancy between the `bill_id` path parameter and the `billId` attribute in the request body, which takes precedence and is used in internal logic. When executing this operation, both IDs must match, otherwise the request will be rejected. This is a legacy redundancy and will be removed in future versions of this operation.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- @param billId UUID of the bill to be used in this operation.
+ @param billId UUID of the bill to be used in this operation. Must match the `billId` provided in the request body.
  @return ApiCreateABillPaymentRequest
 */
 func (a *BillPaymentsAPIService) CreateABillPayment(ctx context.Context, billId string) ApiCreateABillPaymentRequest {

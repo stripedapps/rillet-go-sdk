@@ -30,7 +30,7 @@ type CreateFullInvoiceRequest struct {
 	PurchaseOrderNumber *string `json:"purchase_order_number,omitempty"`
 	Memo *string `json:"memo,omitempty"`
 	// The ID for the bank account that, should be shown on the invoice. You can find the ID in the UI at /settings/bank-accounts.
-	BankAccountId string `json:"bank_account_id"`
+	BankAccountId *string `json:"bank_account_id,omitempty"`
 	ExternalReferences []ExternalReference `json:"external_references,omitempty"`
 	ExchangeRate *ExchangeRate `json:"exchange_rate,omitempty"`
 	Scope *string `json:"scope,omitempty"`
@@ -42,12 +42,11 @@ type _CreateFullInvoiceRequest CreateFullInvoiceRequest
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCreateFullInvoiceRequest(customerId string, items []CreateFullInvoiceItemRequest, invoiceDate string, bankAccountId string) *CreateFullInvoiceRequest {
+func NewCreateFullInvoiceRequest(customerId string, items []CreateFullInvoiceItemRequest, invoiceDate string) *CreateFullInvoiceRequest {
 	this := CreateFullInvoiceRequest{}
 	this.CustomerId = customerId
 	this.Items = items
 	this.InvoiceDate = invoiceDate
-	this.BankAccountId = bankAccountId
 	var scope string = "FULL"
 	this.Scope = &scope
 	return &this
@@ -263,28 +262,36 @@ func (o *CreateFullInvoiceRequest) SetMemo(v string) {
 	o.Memo = &v
 }
 
-// GetBankAccountId returns the BankAccountId field value
+// GetBankAccountId returns the BankAccountId field value if set, zero value otherwise.
 func (o *CreateFullInvoiceRequest) GetBankAccountId() string {
-	if o == nil {
+	if o == nil || IsNil(o.BankAccountId) {
 		var ret string
 		return ret
 	}
-
-	return o.BankAccountId
+	return *o.BankAccountId
 }
 
-// GetBankAccountIdOk returns a tuple with the BankAccountId field value
+// GetBankAccountIdOk returns a tuple with the BankAccountId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *CreateFullInvoiceRequest) GetBankAccountIdOk() (*string, bool) {
-	if o == nil {
+	if o == nil || IsNil(o.BankAccountId) {
 		return nil, false
 	}
-	return &o.BankAccountId, true
+	return o.BankAccountId, true
 }
 
-// SetBankAccountId sets field value
+// HasBankAccountId returns a boolean if a field has been set.
+func (o *CreateFullInvoiceRequest) HasBankAccountId() bool {
+	if o != nil && !IsNil(o.BankAccountId) {
+		return true
+	}
+
+	return false
+}
+
+// SetBankAccountId gets a reference to the given string and assigns it to the BankAccountId field.
 func (o *CreateFullInvoiceRequest) SetBankAccountId(v string) {
-	o.BankAccountId = v
+	o.BankAccountId = &v
 }
 
 // GetExternalReferences returns the ExternalReferences field value if set, zero value otherwise.
@@ -408,7 +415,9 @@ func (o CreateFullInvoiceRequest) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Memo) {
 		toSerialize["memo"] = o.Memo
 	}
-	toSerialize["bank_account_id"] = o.BankAccountId
+	if !IsNil(o.BankAccountId) {
+		toSerialize["bank_account_id"] = o.BankAccountId
+	}
 	if !IsNil(o.ExternalReferences) {
 		toSerialize["external_references"] = o.ExternalReferences
 	}
@@ -429,7 +438,6 @@ func (o *CreateFullInvoiceRequest) UnmarshalJSON(data []byte) (err error) {
 		"customer_id",
 		"items",
 		"invoice_date",
-		"bank_account_id",
 	}
 
 	allProperties := make(map[string]interface{})
