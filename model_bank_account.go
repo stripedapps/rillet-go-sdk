@@ -32,6 +32,8 @@ type BankAccount struct {
 	AccountCode *string `json:"account_code,omitempty"`
 	// Last digits of the bank account number
 	Mask *string `json:"mask,omitempty"`
+	// The earliest date from which bank transactions are tracked for this account. Omitted for pre-existing accounts that have no recorded start date.
+	TransactionsStartDate *string `json:"transactions_start_date,omitempty"`
 	Status BankAccountStatus `json:"status"`
 }
 
@@ -251,6 +253,38 @@ func (o *BankAccount) SetMask(v string) {
 	o.Mask = &v
 }
 
+// GetTransactionsStartDate returns the TransactionsStartDate field value if set, zero value otherwise.
+func (o *BankAccount) GetTransactionsStartDate() string {
+	if o == nil || IsNil(o.TransactionsStartDate) {
+		var ret string
+		return ret
+	}
+	return *o.TransactionsStartDate
+}
+
+// GetTransactionsStartDateOk returns a tuple with the TransactionsStartDate field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *BankAccount) GetTransactionsStartDateOk() (*string, bool) {
+	if o == nil || IsNil(o.TransactionsStartDate) {
+		return nil, false
+	}
+	return o.TransactionsStartDate, true
+}
+
+// HasTransactionsStartDate returns a boolean if a field has been set.
+func (o *BankAccount) HasTransactionsStartDate() bool {
+	if o != nil && !IsNil(o.TransactionsStartDate) {
+		return true
+	}
+
+	return false
+}
+
+// SetTransactionsStartDate gets a reference to the given string and assigns it to the TransactionsStartDate field.
+func (o *BankAccount) SetTransactionsStartDate(v string) {
+	o.TransactionsStartDate = &v
+}
+
 // GetStatus returns the Status field value
 func (o *BankAccount) GetStatus() BankAccountStatus {
 	if o == nil {
@@ -297,6 +331,9 @@ func (o BankAccount) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Mask) {
 		toSerialize["mask"] = o.Mask
+	}
+	if !IsNil(o.TransactionsStartDate) {
+		toSerialize["transactions_start_date"] = o.TransactionsStartDate
 	}
 	toSerialize["status"] = o.Status
 	return toSerialize, nil

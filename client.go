@@ -75,6 +75,8 @@ type APIClient struct {
 
 	CustomersAPI CustomersAPI
 
+	DraftContractsAPI DraftContractsAPI
+
 	FieldsAPI FieldsAPI
 
 	HealthAPI HealthAPI
@@ -133,6 +135,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.CreditMemosAPI = (*CreditMemosAPIService)(&c.common)
 	c.CustomerPaymentsAPI = (*CustomerPaymentsAPIService)(&c.common)
 	c.CustomersAPI = (*CustomersAPIService)(&c.common)
+	c.DraftContractsAPI = (*DraftContractsAPIService)(&c.common)
 	c.FieldsAPI = (*FieldsAPIService)(&c.common)
 	c.HealthAPI = (*HealthAPIService)(&c.common)
 	c.InvoicePaymentsAPI = (*InvoicePaymentsAPIService)(&c.common)

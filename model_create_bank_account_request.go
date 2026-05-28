@@ -31,6 +31,8 @@ type CreateBankAccountRequest struct {
 	AccountCode string `json:"account_code"`
 	// Last digits of the bank account number
 	Mask *string `json:"mask,omitempty"`
+	// The earliest date from which bank transactions are tracked for this account. Defaults to the date of creation when omitted.
+	TransactionsStartDate *string `json:"transactions_start_date,omitempty"`
 }
 
 type _CreateBankAccountRequest CreateBankAccountRequest
@@ -209,6 +211,38 @@ func (o *CreateBankAccountRequest) SetMask(v string) {
 	o.Mask = &v
 }
 
+// GetTransactionsStartDate returns the TransactionsStartDate field value if set, zero value otherwise.
+func (o *CreateBankAccountRequest) GetTransactionsStartDate() string {
+	if o == nil || IsNil(o.TransactionsStartDate) {
+		var ret string
+		return ret
+	}
+	return *o.TransactionsStartDate
+}
+
+// GetTransactionsStartDateOk returns a tuple with the TransactionsStartDate field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *CreateBankAccountRequest) GetTransactionsStartDateOk() (*string, bool) {
+	if o == nil || IsNil(o.TransactionsStartDate) {
+		return nil, false
+	}
+	return o.TransactionsStartDate, true
+}
+
+// HasTransactionsStartDate returns a boolean if a field has been set.
+func (o *CreateBankAccountRequest) HasTransactionsStartDate() bool {
+	if o != nil && !IsNil(o.TransactionsStartDate) {
+		return true
+	}
+
+	return false
+}
+
+// SetTransactionsStartDate gets a reference to the given string and assigns it to the TransactionsStartDate field.
+func (o *CreateBankAccountRequest) SetTransactionsStartDate(v string) {
+	o.TransactionsStartDate = &v
+}
+
 func (o CreateBankAccountRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -226,6 +260,9 @@ func (o CreateBankAccountRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize["account_code"] = o.AccountCode
 	if !IsNil(o.Mask) {
 		toSerialize["mask"] = o.Mask
+	}
+	if !IsNil(o.TransactionsStartDate) {
+		toSerialize["transactions_start_date"] = o.TransactionsStartDate
 	}
 	return toSerialize, nil
 }

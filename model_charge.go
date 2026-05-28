@@ -26,6 +26,8 @@ type Charge struct {
 	Items []ChargeItem `json:"items"`
 	ChargeDate string `json:"charge_date"`
 	ImpactDate *string `json:"impact_date,omitempty"`
+	// The account code found in the Chart of Accounts
+	CreditCardAccountCode string `json:"credit_card_account_code"`
 	SubsidiaryId *string `json:"subsidiary_id,omitempty"`
 	ExternalReferences []ExternalReference `json:"external_references,omitempty"`
 	ExchangeRate *ExchangeRate `json:"exchange_rate,omitempty"`
@@ -41,11 +43,12 @@ type _Charge Charge
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewCharge(vendorId string, items []ChargeItem, chargeDate string, id string, status ChargeStatus, updatedAt time.Time) *Charge {
+func NewCharge(vendorId string, items []ChargeItem, chargeDate string, creditCardAccountCode string, id string, status ChargeStatus, updatedAt time.Time) *Charge {
 	this := Charge{}
 	this.VendorId = vendorId
 	this.Items = items
 	this.ChargeDate = chargeDate
+	this.CreditCardAccountCode = creditCardAccountCode
 	this.Id = id
 	this.Status = status
 	this.UpdatedAt = updatedAt
@@ -162,6 +165,30 @@ func (o *Charge) HasImpactDate() bool {
 // SetImpactDate gets a reference to the given string and assigns it to the ImpactDate field.
 func (o *Charge) SetImpactDate(v string) {
 	o.ImpactDate = &v
+}
+
+// GetCreditCardAccountCode returns the CreditCardAccountCode field value
+func (o *Charge) GetCreditCardAccountCode() string {
+	if o == nil {
+		var ret string
+		return ret
+	}
+
+	return o.CreditCardAccountCode
+}
+
+// GetCreditCardAccountCodeOk returns a tuple with the CreditCardAccountCode field value
+// and a boolean to check if the value has been set.
+func (o *Charge) GetCreditCardAccountCodeOk() (*string, bool) {
+	if o == nil {
+		return nil, false
+	}
+	return &o.CreditCardAccountCode, true
+}
+
+// SetCreditCardAccountCode sets field value
+func (o *Charge) SetCreditCardAccountCode(v string) {
+	o.CreditCardAccountCode = v
 }
 
 // GetSubsidiaryId returns the SubsidiaryId field value if set, zero value otherwise.
@@ -348,6 +375,7 @@ func (o Charge) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.ImpactDate) {
 		toSerialize["impact_date"] = o.ImpactDate
 	}
+	toSerialize["credit_card_account_code"] = o.CreditCardAccountCode
 	if !IsNil(o.SubsidiaryId) {
 		toSerialize["subsidiary_id"] = o.SubsidiaryId
 	}
@@ -371,6 +399,7 @@ func (o *Charge) UnmarshalJSON(data []byte) (err error) {
 		"vendor_id",
 		"items",
 		"charge_date",
+		"credit_card_account_code",
 		"id",
 		"status",
 		"updated_at",

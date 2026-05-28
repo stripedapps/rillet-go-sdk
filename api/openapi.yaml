@@ -861,6 +861,206 @@ paths:
       summary: Ends an open-ended contract
       tags:
       - Contracts
+  /draft-contracts/{draft_contract_id}:
+    delete:
+      description: Permanently removes a draft contract along with its line items
+        and external references. Use this to programmatically reject a draft contract
+        instead of doing it from the Rillet UI.
+      operationId: delete-a-draft-contract
+      parameters:
+      - description: UUID of the draft contract to be used in this operation.
+        explode: false
+        in: path
+        name: draft_contract_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: No Content
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Deletes a draft contract
+      tags:
+      - Draft Contracts
+    get:
+      description: "Returns a draft contract by id, including its line items and any\
+        \ attached external references."
+      operationId: retrieve-a-draft-contract
+      parameters:
+      - description: UUID of the draft contract to be used in this operation.
+        explode: false
+        in: path
+        name: draft_contract_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftContract'
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Retrieves a draft contract
+      tags:
+      - Draft Contracts
+    parameters:
+    - description: UUID of the draft contract to be used in this operation.
+      explode: false
+      in: path
+      name: draft_contract_id
+      required: true
+      schema:
+        format: uuid
+        type: string
+      style: simple
+    put:
+      description: |
+        Replaces the draft contract identified by `draft_contract_id` with the supplied payload. The body shape
+        matches `POST /draft-contracts` — items and external_references on the existing record are fully replaced.
+        Returns 404 if the id is not a draft contract in the organization.
+      operationId: update-a-draft-contract
+      parameters:
+      - description: UUID of the draft contract to be used in this operation.
+        explode: false
+        in: path
+        name: draft_contract_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDraftContractRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftContract'
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Updates a draft contract
+      tags:
+      - Draft Contracts
+  /draft-contracts:
+    get:
+      description: |
+        Returns draft contracts with cursor pagination. Draft contracts are staged records that appear in the Rillet UI under
+        "Draft" for a human to approve or reject before they become active contracts.
+      operationId: list-all-draft-contracts
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/subsidiary_id'
+      - description: Optional UUID filter by customer.
+        explode: true
+        in: query
+        name: customer_id
+        required: false
+        schema:
+          format: uuid
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list_all_draft_contracts_200_response'
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Lists all draft contracts
+      tags:
+      - Draft Contracts
+    post:
+      description: |
+        Stages a contract in the "draft" holding state instead of creating it directly as an active contract.
+        Draft contracts appear in the Rillet UI under "Draft" for a human to approve or reject.
+
+        ## Deduplication
+
+        **To prevent duplicate draft contracts on retry, supply at least one `external_references` entry with a
+        stable `(type, id)` pair.** When you POST again with any matching `(type, id)` pair, the prior draft record
+        is replaced with the new payload.
+
+        Draft contracts created without any `external_references` are not deduplicated — every POST creates a new
+        record.
+
+        ## External reference types
+
+        Each reference's `type` must match a slug already defined under Rillet Settings → External References for
+        the organization; unknown slugs return a 400. References attached at create time are preserved when the
+        draft contract is promoted to an active contract.
+
+        ## Promotion
+
+        Promotion to an active contract happens through the Rillet UI. The public API does not currently expose a
+        programmatic promotion endpoint.
+      operationId: create-a-draft-contract
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDraftContractRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftContract'
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Creates a draft contract
+      tags:
+      - Draft Contracts
+  /pending-contracts/{pending_contract_id}:
+    parameters:
+    - description: UUID of the pending contract to be used in this operation.
+      explode: false
+      in: path
+      name: pending_contract_id
+      required: true
+      schema:
+        format: uuid
+        type: string
+      style: simple
   /contract-items/{contract_item_id}/usage:
     delete:
       description: |
@@ -2165,9 +2365,12 @@ paths:
       description: |
         Books a cash or scheduled disbursement that settles all or part of a bill, updating the outstanding payable and linking treasury activity.
         Provide funding source details consistent with your configured payment rails so downstream bank reconciliation stays accurate.
+
+        IMPORTANT: Notice this operation has a redundancy between the `bill_id` path parameter and the `billId` attribute in the request body, which takes precedence and is used in internal logic. When executing this operation, both IDs must match, otherwise the request will be rejected. This is a legacy redundancy and will be removed in future versions of this operation.
       operationId: create-a-bill-payment
       parameters:
-      - description: UUID of the bill to be used in this operation.
+      - description: UUID of the bill to be used in this operation. Must match the
+          `billId` provided in the request body.
         explode: false
         in: path
         name: bill_id
@@ -2270,6 +2473,31 @@ paths:
       summary: Lists all charges
       tags:
       - Charges
+    post:
+      operationId: create-a-charge
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargeRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Charge'
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Create a charge
+      tags:
+      - Charges
   /charges/{charge_id}:
     delete:
       description: |
@@ -2361,6 +2589,31 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: Error
       summary: Lists all reimbursements
+      tags:
+      - Reimbursements
+    post:
+      operationId: create-a-reimbursement
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReimbursementRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reimbursement'
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Error
+      summary: Create a reimbursement
       tags:
       - Reimbursements
   /reimbursements/{reimbursement_id}:
@@ -4235,6 +4488,7 @@ components:
       - percentage
     BankAccount:
       example:
+        transactions_start_date: 2000-01-23
         name: name
         bank_name: bank_name
         account_code: account_code
@@ -4265,6 +4519,13 @@ components:
         mask:
           description: Last digits of the bank account number
           type: string
+        transactions_start_date:
+          description: The earliest date from which bank transactions are tracked
+            for this account. Omitted for pre-existing accounts that have no recorded
+            start date.
+          format: date
+          type: string
+          nullable: true
         status:
           $ref: '#/components/schemas/BankAccountStatus'
       required:
@@ -4280,6 +4541,7 @@ components:
       type: string
     CreateBankAccountRequest:
       example:
+        transactions_start_date: 2000-01-23
         name: name
         bank_name: bank_name
         account_code: account_code
@@ -4305,6 +4567,11 @@ components:
         mask:
           description: Last digits of the bank account number
           type: string
+        transactions_start_date:
+          description: The earliest date from which bank transactions are tracked
+            for this account. Defaults to the date of creation when omitted.
+          format: date
+          type: string
       required:
       - account_code
       - bank_name
@@ -4327,6 +4594,13 @@ components:
           amount: "1.01"
           currency: USD
         subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
       properties:
         id:
           format: uuid
@@ -4356,6 +4630,11 @@ components:
         excluded:
           description: Whether the transaction is excluded from reconciliation
           type: boolean
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
       required:
       - bank_account_id
       - date
@@ -4381,6 +4660,13 @@ components:
         net_amount:
           amount: "1.01"
           currency: USD
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
       properties:
         bank_account_id:
           format: uuid
@@ -4406,6 +4692,11 @@ components:
           default: false
           description: Whether the transaction is excluded from reconciliation
           type: boolean
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
       required:
       - bank_account_id
       - date
@@ -4425,6 +4716,13 @@ components:
         net_amount:
           amount: "1.01"
           currency: USD
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
       properties:
         date:
           format: date
@@ -4445,6 +4743,11 @@ components:
         excluded:
           description: Whether the transaction is excluded from reconciliation
           type: boolean
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
       required:
       - date
       - merchant
@@ -5282,6 +5585,471 @@ components:
           type: string
       required:
       - end_date
+    CreateDraftContractRequest:
+      example:
+        end_date: 2000-01-23
+        amount:
+          amount: "1.01"
+          currency: USD
+        close_date: 2000-01-23
+        scope: FULL
+        name: Acme Corp - Annual subscription
+        subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        customer_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        items:
+        - end_date: 2000-01-23
+          quantity: 1
+          price:
+            type: FIXED_RECURRING
+            amount:
+              amount: "10.00"
+              currency: USD
+            interval_months: 1
+          product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          discount:
+            type: AMOUNT
+            amount_off:
+              amount: "10.00"
+              currency: USD
+          start_date: 2000-01-23
+        - end_date: 2000-01-23
+          quantity: 1
+          price:
+            type: FIXED_RECURRING
+            amount:
+              amount: "10.00"
+              currency: USD
+            interval_months: 1
+          product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          discount:
+            type: AMOUNT
+            amount_off:
+              amount: "10.00"
+              currency: USD
+          start_date: 2000-01-23
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        start_date: 2000-01-23
+      properties:
+        external_references:
+          description: |
+            Cross-system identifiers for this draft contract. Each reference's `type` slug must already exist in
+            the org's external reference types (configurable in Rillet Settings).
+
+            **Required for deduplication.** Re-posting with any matching `(type, id)` pair replaces the prior draft
+            record. Draft contracts created without external_references are not deduplicated.
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
+        subsidiary_id:
+          format: uuid
+          type: string
+        customer_id:
+          description: Must reference a customer that already exists in Rillet. Use
+            `POST /customers` first if needed.
+          format: uuid
+          type: string
+        name:
+          example: Acme Corp - Annual subscription
+          type: string
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        close_date:
+          format: date
+          type: string
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+        scope:
+          $ref: '#/components/schemas/ContractScope'
+        items:
+          description: Contract line items. At least one item is required.
+          items:
+            $ref: '#/components/schemas/DraftContractItemRequest'
+          minItems: 1
+          type: array
+      required:
+      - amount
+      - close_date
+      - customer_id
+      - items
+      - name
+      - scope
+      - subsidiary_id
+    DraftContractItemRequest:
+      example:
+        end_date: 2000-01-23
+        quantity: 1
+        price:
+          type: FIXED_RECURRING
+          amount:
+            amount: "10.00"
+            currency: USD
+          interval_months: 1
+        product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        discount:
+          type: AMOUNT
+          amount_off:
+            amount: "10.00"
+            currency: USD
+        start_date: 2000-01-23
+      properties:
+        product_id:
+          format: uuid
+          type: string
+        price:
+          $ref: '#/components/schemas/Price'
+        quantity:
+          example: 1
+          minimum: 1
+          type: number
+        discount:
+          $ref: '#/components/schemas/Discount'
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+      required:
+      - price
+      - product_id
+      - quantity
+    DraftContract:
+      example:
+        end_date: 2000-01-23
+        amount:
+          amount: "1.01"
+          currency: USD
+        close_date: 2000-01-23
+        scope: ""
+        name: name
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        customer_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        items:
+        - end_date: 2000-01-23
+          quantity: 0.8008281904610115
+          price:
+            type: FIXED_RECURRING
+            amount:
+              amount: "10.00"
+              currency: USD
+            interval_months: 1
+          product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          discount:
+            type: AMOUNT
+            amount_off:
+              amount: "10.00"
+              currency: USD
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          start_date: 2000-01-23
+        - end_date: 2000-01-23
+          quantity: 0.8008281904610115
+          price:
+            type: FIXED_RECURRING
+            amount:
+              amount: "10.00"
+              currency: USD
+            interval_months: 1
+          product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          discount:
+            type: AMOUNT
+            amount_off:
+              amount: "10.00"
+              currency: USD
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          start_date: 2000-01-23
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        start_date: 2000-01-23
+      properties:
+        id:
+          format: uuid
+          type: string
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
+        subsidiary_id:
+          format: uuid
+          type: string
+        customer_id:
+          format: uuid
+          type: string
+        name:
+          type: string
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        close_date:
+          format: date
+          type: string
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+        scope:
+          allOf:
+          - $ref: '#/components/schemas/ContractScope'
+          description: |
+            The accounting scope. May be null for draft contracts imported from integrations whose internal scope (e.g.
+            Rillet-handles-revenue-recognition-only when an external billing system handles invoicing) is not expressible in the public API enum.
+            POST and PUT requests still require an explicit scope.
+          nullable: true
+        items:
+          items:
+            $ref: '#/components/schemas/DraftContractItem'
+          type: array
+      required:
+      - amount
+      - close_date
+      - customer_id
+      - external_references
+      - id
+      - items
+      - name
+      - subsidiary_id
+    DraftContractItem:
+      example:
+        end_date: 2000-01-23
+        quantity: 0.8008281904610115
+        price:
+          type: FIXED_RECURRING
+          amount:
+            amount: "10.00"
+            currency: USD
+          interval_months: 1
+        product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        discount:
+          type: AMOUNT
+          amount_off:
+            amount: "10.00"
+            currency: USD
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        start_date: 2000-01-23
+      properties:
+        id:
+          format: uuid
+          type: string
+        product_id:
+          format: uuid
+          type: string
+        price:
+          $ref: '#/components/schemas/Price'
+        quantity:
+          type: number
+        discount:
+          $ref: '#/components/schemas/Discount'
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+      required:
+      - id
+      - price
+      - product_id
+      - quantity
+    CreatePendingContractRequest:
+      properties:
+        external_references:
+          description: |
+            Cross-system identifiers for this pending contract. Each reference's `type` slug must already exist in
+            the org's external reference types (configurable in Rillet Settings).
+
+            **Required for deduplication.** Re-posting with any matching `(type, id)` pair replaces the prior pending
+            record. Pending contracts created without external_references are not deduplicated.
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
+        subsidiary_id:
+          format: uuid
+          type: string
+        customer_id:
+          description: Must reference a customer that already exists in Rillet. Use
+            `POST /customers` first if needed.
+          format: uuid
+          type: string
+        name:
+          example: Acme Corp - Annual subscription
+          type: string
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        close_date:
+          format: date
+          type: string
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+        scope:
+          $ref: '#/components/schemas/ContractScope'
+        items:
+          description: Contract line items. At least one item is required.
+          items:
+            $ref: '#/components/schemas/PendingContractItemRequest'
+          minItems: 1
+          type: array
+      required:
+      - amount
+      - close_date
+      - customer_id
+      - items
+      - name
+      - scope
+      - subsidiary_id
+    PendingContractItemRequest:
+      example:
+        end_date: 2000-01-23
+        quantity: 1
+        price:
+          type: FIXED_RECURRING
+          amount:
+            amount: "10.00"
+            currency: USD
+          interval_months: 1
+        product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        discount:
+          type: AMOUNT
+          amount_off:
+            amount: "10.00"
+            currency: USD
+        start_date: 2000-01-23
+      properties:
+        product_id:
+          format: uuid
+          type: string
+        price:
+          $ref: '#/components/schemas/Price'
+        quantity:
+          example: 1
+          minimum: 1
+          type: number
+        discount:
+          $ref: '#/components/schemas/Discount'
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+      required:
+      - price
+      - product_id
+      - quantity
+    PendingContract:
+      properties:
+        id:
+          format: uuid
+          type: string
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
+        subsidiary_id:
+          format: uuid
+          type: string
+        customer_id:
+          format: uuid
+          type: string
+        name:
+          type: string
+        amount:
+          $ref: '#/components/schemas/MonetaryAmount'
+        close_date:
+          format: date
+          type: string
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+        scope:
+          allOf:
+          - $ref: '#/components/schemas/ContractScope'
+          description: |
+            The accounting scope. May be null for pending contracts imported from integrations whose internal scope (e.g.
+            Rillet-handles-revenue-recognition-only when an external billing system handles invoicing) is not expressible in the public API enum.
+            POST and PUT requests still require an explicit scope.
+          nullable: true
+        items:
+          items:
+            $ref: '#/components/schemas/PendingContractItem'
+          type: array
+      required:
+      - amount
+      - close_date
+      - customer_id
+      - external_references
+      - id
+      - items
+      - name
+      - subsidiary_id
+    PendingContractItem:
+      example:
+        end_date: 2000-01-23
+        quantity: 0.8008281904610115
+        price:
+          type: FIXED_RECURRING
+          amount:
+            amount: "10.00"
+            currency: USD
+          interval_months: 1
+        product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        discount:
+          type: AMOUNT
+          amount_off:
+            amount: "10.00"
+            currency: USD
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        start_date: 2000-01-23
+      properties:
+        id:
+          format: uuid
+          type: string
+        product_id:
+          format: uuid
+          type: string
+        price:
+          $ref: '#/components/schemas/Price'
+        quantity:
+          type: number
+        discount:
+          $ref: '#/components/schemas/Discount'
+        start_date:
+          format: date
+          type: string
+        end_date:
+          format: date
+          type: string
+      required:
+      - id
+      - price
+      - product_id
+      - quantity
     PreviewContractAmendmentRequest:
       example:
         amendment_date: 2000-01-23
@@ -6840,6 +7608,7 @@ components:
           base: USD
           target: USD
         due_date: 2000-01-23
+        sent_at: 2000-01-23T04:56:07.000+00:00
         subtotal:
           amount: "1.01"
           currency: USD
@@ -6988,6 +7757,12 @@ components:
           uniqueItems: true
         updated_at:
           description: ISO 8601 timestamp in UTC timezone (must end with 'Z')
+          format: date-time
+          type: string
+        sent_at:
+          description: |
+            ISO 8601 timestamp in UTC timezone (must end with 'Z') marking when the invoice was first sent to the customer
+            from Rillet (either by a user action or by automation). Null if the invoice has never been sent from Rillet.
           format: date-time
           type: string
       required:
@@ -8183,10 +8958,12 @@ components:
         mapping:
           FULL: '#/components/schemas/CreateFullInvoiceRequest'
           REVENUE_RECOGNITION_ONLY: '#/components/schemas/CreateRevenueRecognitionOnlyInvoiceRequest'
+          AR_ONLY: '#/components/schemas/CreateArOnlyInvoiceRequest'
         propertyName: scope
       oneOf:
       - $ref: '#/components/schemas/CreateFullInvoiceRequest'
       - $ref: '#/components/schemas/CreateRevenueRecognitionOnlyInvoiceRequest'
+      - $ref: '#/components/schemas/CreateArOnlyInvoiceRequest'
     CreateFullInvoiceRequest:
       example:
         bank_account_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -8312,7 +9089,6 @@ components:
           default: FULL
           type: string
       required:
-      - bank_account_id
       - customer_id
       - invoice_date
       - items
@@ -8347,6 +9123,44 @@ components:
           type: string
         scope:
           default: REVENUE_RECOGNITION_ONLY
+          type: string
+      required:
+      - customer_id
+      - external_references
+      - invoice_date
+      - invoice_number
+      - items
+    CreateArOnlyInvoiceRequest:
+      properties:
+        customer_id:
+          format: uuid
+          type: string
+        due_date:
+          description: "Defaults to invoice_date, if not provided"
+          format: date
+          type: string
+        invoice_date:
+          format: date
+          type: string
+        invoice_number:
+          type: string
+        tax_amount:
+          $ref: '#/components/schemas/RoundedMonetaryAmount'
+        items:
+          items:
+            $ref: '#/components/schemas/CreateRevenueRecognitionOnlyInvoiceItemRequest'
+          minItems: 1
+          type: array
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
+        subsidiary_id:
+          format: uuid
+          type: string
+        scope:
+          default: AR_ONLY
           type: string
       required:
       - customer_id
@@ -9601,6 +10415,71 @@ components:
       - id
       - status
     ChargeRequest:
+      example:
+        exchange_rate:
+          date: 2000-01-23
+          rate: rate
+          base: USD
+          target: USD
+        credit_card_account_code: "11112"
+        vendor_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        charge_date: 2000-01-23
+        subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        items:
+        - amount:
+            amount: "1.01"
+            currency: USD
+          service_period:
+            start: 2000-01-23
+            end: 2000-01-23
+          description: API Charge
+          account_code: "11112"
+          fields:
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          tax_rate:
+            tax_amount:
+              amount: "1.01"
+              currency: USD
+            coverage: INCLUSIVE
+            country: US
+            tax_code: tax_code
+            percentage: 0
+            description: description
+            type: VAT
+        - amount:
+            amount: "1.01"
+            currency: USD
+          service_period:
+            start: 2000-01-23
+            end: 2000-01-23
+          description: API Charge
+          account_code: "11112"
+          fields:
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          tax_rate:
+            tax_amount:
+              amount: "1.01"
+              currency: USD
+            coverage: INCLUSIVE
+            country: US
+            tax_code: tax_code
+            percentage: 0
+            description: description
+            type: VAT
+        impact_date: 2000-01-23
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
       properties:
         vendor_id:
           format: uuid
@@ -9616,6 +10495,10 @@ components:
         impact_date:
           format: date
           type: string
+        credit_card_account_code:
+          description: The account code found in the Chart of Accounts
+          example: "11112"
+          type: string
         subsidiary_id:
           format: uuid
           type: string
@@ -9628,6 +10511,7 @@ components:
           $ref: '#/components/schemas/ExchangeRate'
       required:
       - charge_date
+      - credit_card_account_code
       - items
       - vendor_id
     Charge:
@@ -9659,6 +10543,7 @@ components:
           base: USD
           target: USD
         updated_at: 2000-01-23T04:56:07.000+00:00
+        credit_card_account_code: "11112"
         vendor_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
         charge_date: 2000-01-23
         id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -9847,6 +10732,146 @@ components:
       - expense_id
       - id
       - status
+    CreateReimbursementRequest:
+      example:
+        vendor_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        payable_account_code: "11112"
+        reimbursement_date: 2000-01-23
+        subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        items:
+        - amount:
+            amount: "1.01"
+            currency: USD
+          service_period:
+            start: 2000-01-23
+            end: 2000-01-23
+          description: Travel reimbursement
+          account_code: "11112"
+          fields:
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          tax_rate:
+            tax_amount:
+              amount: "1.01"
+              currency: USD
+            coverage: INCLUSIVE
+            country: US
+            tax_code: tax_code
+            percentage: 0
+            description: description
+            type: VAT
+        - amount:
+            amount: "1.01"
+            currency: USD
+          service_period:
+            start: 2000-01-23
+            end: 2000-01-23
+          description: Travel reimbursement
+          account_code: "11112"
+          fields:
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          tax_rate:
+            tax_amount:
+              amount: "1.01"
+              currency: USD
+            coverage: INCLUSIVE
+            country: US
+            tax_code: tax_code
+            percentage: 0
+            description: description
+            type: VAT
+        impact_date: 2000-01-23
+        external_references:
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+        - id: "234"
+          type: xyzSystemId
+          url: https://xyzsystempage.com/ids/234
+      properties:
+        vendor_id:
+          format: uuid
+          type: string
+        items:
+          items:
+            $ref: '#/components/schemas/CreateReimbursementItemRequest'
+          minItems: 1
+          type: array
+        reimbursement_date:
+          format: date
+          type: string
+        payable_account_code:
+          description: The account code found in the Chart of Accounts
+          example: "11112"
+          type: string
+        impact_date:
+          description: GL impact date. Defaults to reimbursement_date if omitted.
+          format: date
+          type: string
+        subsidiary_id:
+          format: uuid
+          type: string
+        external_references:
+          items:
+            $ref: '#/components/schemas/ExternalReference'
+          type: array
+          uniqueItems: true
+      required:
+      - items
+      - payable_account_code
+      - reimbursement_date
+      - vendor_id
+    CreateReimbursementItemRequest:
+      example:
+        amount:
+          amount: "1.01"
+          currency: USD
+        service_period:
+          start: 2000-01-23
+          end: 2000-01-23
+        description: Travel reimbursement
+        account_code: "11112"
+        fields:
+        - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        - field_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          field_value_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        tax_rate:
+          tax_amount:
+            amount: "1.01"
+            currency: USD
+          coverage: INCLUSIVE
+          country: US
+          tax_code: tax_code
+          percentage: 0
+          description: description
+          type: VAT
+      properties:
+        description:
+          example: Travel reimbursement
+          type: string
+        account_code:
+          description: The account code found in the Chart of Accounts
+          example: "11112"
+          type: string
+        amount:
+          $ref: '#/components/schemas/RoundedMonetaryAmount'
+        tax_rate:
+          $ref: '#/components/schemas/ExpenseTaxRate'
+        service_period:
+          $ref: '#/components/schemas/CalendarPeriod'
+        fields:
+          items:
+            $ref: '#/components/schemas/FieldAssignments_inner'
+          type: array
+      required:
+      - account_code
+      - amount
     ReimbursementRequest:
       properties:
         vendor_id:
@@ -13237,6 +14262,122 @@ components:
           $ref: '#/components/schemas/Pagination'
       required:
       - contracts
+    list_all_draft_contracts_200_response:
+      example:
+        pagination:
+          next_cursor: iLQvkEj3sh3UiweC
+        draft_contracts:
+        - end_date: 2000-01-23
+          amount:
+            amount: "1.01"
+            currency: USD
+          close_date: 2000-01-23
+          scope: ""
+          name: name
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          customer_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          items:
+          - end_date: 2000-01-23
+            quantity: 0.8008281904610115
+            price:
+              type: FIXED_RECURRING
+              amount:
+                amount: "10.00"
+                currency: USD
+              interval_months: 1
+            product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            discount:
+              type: AMOUNT
+              amount_off:
+                amount: "10.00"
+                currency: USD
+            id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            start_date: 2000-01-23
+          - end_date: 2000-01-23
+            quantity: 0.8008281904610115
+            price:
+              type: FIXED_RECURRING
+              amount:
+                amount: "10.00"
+                currency: USD
+              interval_months: 1
+            product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            discount:
+              type: AMOUNT
+              amount_off:
+                amount: "10.00"
+                currency: USD
+            id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            start_date: 2000-01-23
+          external_references:
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
+          start_date: 2000-01-23
+        - end_date: 2000-01-23
+          amount:
+            amount: "1.01"
+            currency: USD
+          close_date: 2000-01-23
+          scope: ""
+          name: name
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          customer_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          items:
+          - end_date: 2000-01-23
+            quantity: 0.8008281904610115
+            price:
+              type: FIXED_RECURRING
+              amount:
+                amount: "10.00"
+                currency: USD
+              interval_months: 1
+            product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            discount:
+              type: AMOUNT
+              amount_off:
+                amount: "10.00"
+                currency: USD
+            id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            start_date: 2000-01-23
+          - end_date: 2000-01-23
+            quantity: 0.8008281904610115
+            price:
+              type: FIXED_RECURRING
+              amount:
+                amount: "10.00"
+                currency: USD
+              interval_months: 1
+            product_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            discount:
+              type: AMOUNT
+              amount_off:
+                amount: "10.00"
+                currency: USD
+            id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+            start_date: 2000-01-23
+          external_references:
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
+          start_date: 2000-01-23
+      properties:
+        draft_contracts:
+          items:
+            $ref: '#/components/schemas/DraftContract'
+          type: array
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      required:
+      - draft_contracts
     list_all_contract_item_usage_records_200_response:
       allOf:
       - $ref: '#/components/schemas/UsageRecords'
@@ -13319,6 +14460,7 @@ components:
             base: USD
             target: USD
           due_date: 2000-01-23
+          sent_at: 2000-01-23T04:56:07.000+00:00
           subtotal:
             amount: "1.01"
             currency: USD
@@ -13460,6 +14602,7 @@ components:
             base: USD
             target: USD
           due_date: 2000-01-23
+          sent_at: 2000-01-23T04:56:07.000+00:00
           subtotal:
             amount: "1.01"
             currency: USD
@@ -14253,6 +15396,7 @@ components:
             base: USD
             target: USD
           updated_at: 2000-01-23T04:56:07.000+00:00
+          credit_card_account_code: "11112"
           vendor_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
           charge_date: 2000-01-23
           id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -14321,6 +15465,7 @@ components:
             base: USD
             target: USD
           updated_at: 2000-01-23T04:56:07.000+00:00
+          credit_card_account_code: "11112"
           vendor_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
           charge_date: 2000-01-23
           id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -14645,7 +15790,8 @@ components:
     list_all_bank_accounts_200_response:
       example:
         accounts:
-        - name: name
+        - transactions_start_date: 2000-01-23
+          name: name
           bank_name: bank_name
           account_code: account_code
           currency: USD
@@ -14653,7 +15799,8 @@ components:
           subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
           mask: mask
           status: ACTIVE
-        - name: name
+        - transactions_start_date: 2000-01-23
+          name: name
           bank_name: bank_name
           account_code: account_code
           currency: USD
@@ -14687,6 +15834,13 @@ components:
             amount: "1.01"
             currency: USD
           subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          external_references:
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
         - date: 2000-01-23
           excluded: true
           bank_account_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
@@ -14701,6 +15855,13 @@ components:
             amount: "1.01"
             currency: USD
           subsidiary_id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          external_references:
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
+          - id: "234"
+            type: xyzSystemId
+            url: https://xyzsystempage.com/ids/234
       properties:
         bank_transactions:
           items:

@@ -50,6 +50,8 @@ type Invoice struct {
 	ExternalReferences []ExternalReference `json:"external_references,omitempty"`
 	// ISO 8601 timestamp in UTC timezone (must end with 'Z')
 	UpdatedAt time.Time `json:"updated_at"`
+	// ISO 8601 timestamp in UTC timezone (must end with 'Z') marking when the invoice was first sent to the customer from Rillet (either by a user action or by automation). Null if the invoice has never been sent from Rillet. 
+	SentAt *time.Time `json:"sent_at,omitempty"`
 }
 
 type _Invoice Invoice
@@ -784,6 +786,38 @@ func (o *Invoice) SetUpdatedAt(v time.Time) {
 	o.UpdatedAt = v
 }
 
+// GetSentAt returns the SentAt field value if set, zero value otherwise.
+func (o *Invoice) GetSentAt() time.Time {
+	if o == nil || IsNil(o.SentAt) {
+		var ret time.Time
+		return ret
+	}
+	return *o.SentAt
+}
+
+// GetSentAtOk returns a tuple with the SentAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Invoice) GetSentAtOk() (*time.Time, bool) {
+	if o == nil || IsNil(o.SentAt) {
+		return nil, false
+	}
+	return o.SentAt, true
+}
+
+// HasSentAt returns a boolean if a field has been set.
+func (o *Invoice) HasSentAt() bool {
+	if o != nil && !IsNil(o.SentAt) {
+		return true
+	}
+
+	return false
+}
+
+// SetSentAt gets a reference to the given time.Time and assigns it to the SentAt field.
+func (o *Invoice) SetSentAt(v time.Time) {
+	o.SentAt = &v
+}
+
 func (o Invoice) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -838,6 +872,9 @@ func (o Invoice) ToMap() (map[string]interface{}, error) {
 		toSerialize["external_references"] = o.ExternalReferences
 	}
 	toSerialize["updated_at"] = o.UpdatedAt
+	if !IsNil(o.SentAt) {
+		toSerialize["sent_at"] = o.SentAt
+	}
 	return toSerialize, nil
 }
 
