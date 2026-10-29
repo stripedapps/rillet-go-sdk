@@ -1,10 +1,10 @@
 # Rillet Go SDK
 
-Go client library for the [Rillet Accounting API](https://api.rillet.com). Covers contracts, invoices, bills, payments, journal entries, customers, vendors, reports, webhooks, and more.
+Go client library for the [Rillet Accounting API](https://api.rillet.com). Covers contracts, invoices, bills, payments, journal entries, customers, customer families, vendors, approval workflows, cash matching, close checklists, reports, webhooks, and more.
 
 This client is generated from the Rillet OpenAPI spec using [OpenAPI Generator](https://openapi-generator.tech). Do not edit the generated files directly — regenerate from the spec instead.
 
-- API version: v3.0
+- API version: v4.0
 - Package version: 1.0.0
 - Generator version: 7.13.0
 
@@ -36,6 +36,8 @@ and `generateInterfaces=true` keeps the per-service `…API` interface types.
 `.openapi-generator-ignore` protects `README.md`, `docs/`, and `test/` from being
 overwritten.
 
+After a regeneration, update the "API version" line above to match `info.version` in `openapi.json`.
+
 ## Installation
 
 ```sh
@@ -63,6 +65,7 @@ import (
 
 func main() {
 	cfg := openapi.NewConfiguration()
+	cfg.AddDefaultHeader("X-Rillet-API-Version", "4")
 	client := openapi.NewAPIClient(cfg)
 
 	ctx := context.WithValue(context.Background(), openapi.ContextAccessToken, "YOUR_BEARER_TOKEN")
@@ -71,7 +74,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%d customers\n", len(customers.GetData()))
+	fmt.Printf("%d customers\n", len(customers.GetCustomers()))
 }
 ```
 
@@ -81,51 +84,44 @@ To use a proxy, set the environment variable `HTTP_PROXY`:
 os.Setenv("HTTP_PROXY", "http://proxy_name:proxy_port")
 ```
 
+## API version header
+
+The SDK matches API v4, and the client does not send a version on its own. Set the `X-Rillet-API-Version` header to `4` on the configuration, as the Quick start does. Without the header, Rillet picks the version for you. Its [docs](https://docs.api.rillet.com/docs/getting-started.md) describe version 1 as the default, with a switch to the latest version on August 1st, 2026. An explicit header keeps responses matching the v4 models in this SDK, whichever default applies.
+
 ## Configuration of Server URL
 
-Default configuration comes with `Servers` field that contains server objects as defined in the OpenAPI specification.
+`NewConfiguration()` lists two servers, both from the OpenAPI spec:
+
+| Index | URL | Use |
+|---|---|---|
+| 0 | `https://api.rillet.com` | Production (default) |
+| 1 | `https://sandbox.api.rillet.com` | Sandbox |
 
 ### Select Server Configuration
 
-For using other server than the one defined on index 0 set context value `openapi.ContextServerIndex` of type `int`.
+To use the sandbox, set the context value `openapi.ContextServerIndex` (type `int`) to `1`.
 
 ```go
-ctx := context.WithValue(context.Background(), openapi.ContextServerIndex, 1)
+ctx := context.WithValue(context.Background(), openapi.ContextAccessToken, "YOUR_SANDBOX_TOKEN")
+ctx = context.WithValue(ctx, openapi.ContextServerIndex, 1)
 ```
-
-### Templated Server URL
-
-Templated server URL is formatted using default variables from configuration or from context value `openapi.ContextServerVariables` of type `map[string]string`.
-
-```go
-ctx := context.WithValue(context.Background(), openapi.ContextServerVariables, map[string]string{
-	"basePath": "v2",
-})
-```
-
-Note, enum values are always validated and all unused variables are silently ignored.
 
 ### URLs Configuration per Operation
 
-Each operation can use different server URL defined using `OperationServers` map in the `Configuration`.
-An operation is uniquely identified by `"{classname}Service.{nickname}"` string.
-Similar rules for overriding default operation server index and variables applies by using `openapi.ContextOperationServerIndices` and `openapi.ContextOperationServerVariables` context maps.
+An operation picks its own server with `openapi.ContextOperationServerIndices`. The key is `"{ServiceName}.{OperationName}"`, matching the Go method, for example `CustomersAPIService.ListAllCustomers`.
 
 ```go
 ctx := context.WithValue(context.Background(), openapi.ContextOperationServerIndices, map[string]int{
-	"{classname}Service.{nickname}": 2,
-})
-ctx = context.WithValue(context.Background(), openapi.ContextOperationServerVariables, map[string]map[string]string{
-	"{classname}Service.{nickname}": {
-		"port": "8443",
-	},
+	"CustomersAPIService.ListAllCustomers": 1,
 })
 ```
 
+The spec defines no server variables, so `openapi.ContextServerVariables` and `openapi.ContextOperationServerVariables` have no effect.
+
 ## Documentation For Authorization
 
-
 Authentication schemes defined for the API:
+
 ### bearerAuth
 
 - **Type**: HTTP Bearer token authentication
@@ -134,9 +130,8 @@ Example
 
 ```go
 auth := context.WithValue(context.Background(), openapi.ContextAccessToken, "BEARER_TOKEN_STRING")
-r, err := client.Service.Operation(auth, args)
+customers, _, err := client.CustomersAPI.ListAllCustomers(auth).Execute()
 ```
-
 
 ## Documentation for Utility Methods
 
@@ -148,7 +143,6 @@ Each of these functions takes a value of the given basic type and returns a poin
 * `PtrInt`
 * `PtrInt32`
 * `PtrInt64`
-* `PtrFloat`
 * `PtrFloat32`
 * `PtrFloat64`
 * `PtrString`
@@ -157,4 +151,3 @@ Each of these functions takes a value of the given basic type and returns a poin
 ## Author
 
 Mateo ([@mateomaple](https://github.com/mateomaple))
-
